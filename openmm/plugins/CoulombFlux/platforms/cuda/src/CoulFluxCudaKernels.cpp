@@ -64,6 +64,9 @@ CudaCalcCoulFluxKernel::~CudaCalcAmoebaMultipoleForceKernel() {
 
 void CudaCalcCoulFluxKernel::initialize(const System& system, const CoulFluxForce& force) {
     cu.setAsCurrent();
+    int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+
+    bool useEwald = xxx; // wait for finish
 
     // - Initialize parameters.
     //    - CudaArray dQdXidx;
@@ -73,7 +76,17 @@ void CudaCalcCoulFluxKernel::initialize(const System& system, const CoulFluxForc
     //    - CudaArray initCharge;
     //    - CudaArray realCharge;
     numParticles = force.getNumParticles();
-    dQdXidx.initialize()
+    dQdXidx.initialize() // wait for finish
+    dQdXval.initialize() // wait for finish
+    dEdQ.initialize(cu, numParticles, elementSize, "dEdQ");
+    initCharge.initialize(cu, numParticles, elementSize, "initCharge");
+    realCharge.initialize(cu, numParticles, elementSize, "realCharge");
+
+    // if use Ewald
+    if (...){
+        // calc kmaxx, kmaxy, kmaxz
+        CosSin.initialize(cu, 2*(2*kmaxx-1)*(2*kmaxy-1)*(2*kmaxz-1), elementSize, "CosSin");
+    }
 
     // -- Update initCharge
 

@@ -24,7 +24,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "CudaKernelSources.h"
+#include "CudaCoulFluxKernelSources.h"
 
 using namespace OpenMM;
 using namespace std;

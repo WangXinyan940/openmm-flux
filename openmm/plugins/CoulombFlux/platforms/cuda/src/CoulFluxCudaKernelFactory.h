@@ -1,16 +1,16 @@
-#ifndef OPENMM_CUDAKERNELSOURCES_H_
-#define OPENMM_CUDAKERNELSOURCES_H_
+#ifndef COULFLUX_OPENMM_CUDAKERNELFACTORY_H_
+#define COULFLUX_OPENMM_CUDAKERNELFACTORY_H_
 
 /* -------------------------------------------------------------------------- *
- *                                   OpenMM                                   *
+ *                            OpenMMCoulFlux                                  *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit originating from   *
  * Simbios, the NIH National Center for Physics-Based Simulation of           *
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2012 Stanford University and the Authors.      *
- * Authors: Peter Eastman                                                     *
+ * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Authors:                                                                   *
  * Contributors:                                                              *
  *                                                                            *
  * This program is free software: you can redistribute it and/or modify       *
@@ -27,22 +27,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/common/windowsExportCommon.h"
-#include <string>
+#include "openmm/KernelFactory.h"
 
 namespace OpenMM {
 
 /**
- * This class is a central holding place for the source code of CUDA kernels.
- * The CMake build script inserts declarations into it based on the .cu files in the
- * kernels subfolder.
+ * This KernelFactory creates all kernels for CoulFluxCudaPlatform.
  */
 
-class OPENMM_EXPORT_COMMON CudaKernelSources {
+class CoulFluxCudaKernelFactory : public KernelFactory {
 public:
-@KERNEL_FILE_DECLARATIONS@
+    KernelImpl* createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_CUDAKERNELSOURCES_H_*/
+#endif /*COULFLUX_OPENMM_CUDAKERNELFACTORY_H_*/

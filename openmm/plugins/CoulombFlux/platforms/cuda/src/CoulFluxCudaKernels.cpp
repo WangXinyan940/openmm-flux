@@ -140,8 +140,8 @@ void CudaCalcCoulFluxKernel::initialize(const System& system, const CoulFluxForc
         realChargeVec.push_back(0.0);
     }
     
-    dQdXidx.initialize<int>(cu, numParticles*maxnumdX, "dQdXidx"); // wait for finish
-    dQdXval.initialize<float>(cu, numParticles*maxnumdX, "dQdXval"); // wait for finish
+    dQdXidx.initialize<int>(cu, numParticles*maxnumdX, "dQdXidx"); 
+    dQdXval.initialize<float>(cu, numParticles*maxnumdX, "dQdXval"); 
     dEdQ.initialize(cu, numParticles, elementSize, "dEdQ");
     initCharge.initialize(cu, numParticles, elementSize, "initCharge");
     realCharge.initialize(cu, numParticles, elementSize, "realCharge");

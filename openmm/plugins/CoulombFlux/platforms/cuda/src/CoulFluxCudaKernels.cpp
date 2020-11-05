@@ -41,6 +41,7 @@
 #include <algorithm>
 #include <cmath>
 #include <vector>
+#include <map>
 #include <set>
 #ifdef _MSC_VER
 #include <windows.h>
@@ -130,32 +131,69 @@ void CudaCalcCoulFluxKernel::initialize(const System& system, const CoulFluxForc
         dEdQVec.push_back(0.0);
     }
     //    - CudaArray initCharge;
-    vector<float> initChargeVec;
-    for(int i = 0; i < numParticles; i++){
-        initChargeVec.push_back(0.0);
+    if (cu.getUseDoublePrecision()){
+        vector<double> initChargeVec;
+        for(int i = 0; i < numParticles; i++){
+            double chrg;
+            force.getParticleParameters(i, chrg);
+            initChargeVec.push_back(chrg); 
+        }
+    } else {
+        vector<float> initChargeVec;
+        for(int i = 0; i < numParticles; i++){
+            double chrg;
+            force.getParticleParameters(i, chrg);
+            initChargeVec.push_back((float) chrg); 
+        }
     }
+    
     //    - CudaArray realCharge;
-    vector<float> realChargeVec;
+    if (cu.getUseDoublePrecision()){
+        vector<double> realChargeVec;
+    } else {
+        vector<float> realChargeVec;
+    }
     for(int i = 0; i < numParticles; i++){
         realChargeVec.push_back(0.0);
     }
     
     dQdXidx.initialize<int>(cu, numParticles*maxnumdX, "dQdXidx"); 
+    dQdXidx.upload(dQdXidxVec);
     dQdXval.initialize<float>(cu, numParticles*maxnumdX, "dQdXval"); 
+    dQdXval.upload(dQdXvalVec);
     dEdQ.initialize(cu, numParticles, elementSize, "dEdQ");
+    dEdQ.upload(dEdQVec);
     initCharge.initialize(cu, numParticles, elementSize, "initCharge");
+    initCharge.upload(initChargeVec);
     realCharge.initialize(cu, numParticles, elementSize, "realCharge");
+    realCharge.upload(realChargeVec);
+
+
 
     // if use Ewald
     if (useEwald){
         // calc kmaxx, kmaxy, kmaxz
+        // Work here
         CosSin.initialize(cu, 2*(2*kmaxx-1)*(2*kmaxy-1)*(2*kmaxz-1), elementSize, "CosSin");
+        if (cu.getUseDoublePrecision()) {
+            vector<double> CosSinVal;
+            for (int i = 0; i < 2*(2*kmaxx-1)*(2*kmaxy-1)*(2*kmaxz-1); i++) {
+                CosSinVal.push_back(0.0);
+            }
+            CosSin.upload(CosSinVal);
+        } else {
+            vector<float> CosSinVal;
+            for (int i = 0; i < 2*(2*kmaxx-1)*(2*kmaxy-1)*(2*kmaxz-1); i++) {
+                CosSinVal.push_back(0.0f);
+            }
+            CosSin.upload(CosSinVal);
+        }
     }
 
     // -- Update exceptions
     numExceptions = force.getNumExceptions();
     vector<vector<int>> exclusions(numParticles);
-    for (int i = 0; i < numExceptions; i++){
+    for (int i = 0; i < numExceptions; i++) {
         // (int index, int& particle1, int& particle2, double& charge1, double& charge2, double& scale)
         int p1, p2; 
         double c1,c2,scale;
@@ -177,6 +215,19 @@ void CudaCalcCoulFluxKernel::initialize(const System& system, const CoulFluxForc
     cu.getNonbondedUtilities().setUsePadding(false);
 
     // -- Build some kernels: calc constants
+    map<string, string> defines;
+    // Update num_atoms
+    defines["NUM_ATOMS"] = cu.intToString(numParticles);
+    defines["NUM_BLOCKS"] = cu.intToString(cu.getNumAtomBlocks());
+    defines["TILE_SIZE"] = cu.intToString(CudaContext::TileSize);
+    int numExclusionTiles = tilesWithExclusions.size();
+    defines["NUM_TILES_WITH_EXCLUSIONS"] = cu.intToString(numExclusionTiles);
+    int numContexts = cu.getPlatformData().contexts.size();
+    int startExclusionIndex = cu.getContextIndex()*numExclusionTiles/numContexts;
+    int endExclusionIndex = (cu.getContextIndex()+1)*numExclusionTiles/numContexts;
+    defines["FIRST_EXCLUSION_TILE"] = cu.intToString(startExclusionIndex);
+    defines["LAST_EXCLUSION_TILE"] = cu.intToString(endExclusionIndex);
+    // Update kmaxx, kmaxy, kmaxz
 
     // -- Build some kernels: generate kernel files and load them
 

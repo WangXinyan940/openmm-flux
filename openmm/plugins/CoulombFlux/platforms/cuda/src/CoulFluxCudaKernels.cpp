@@ -68,7 +68,7 @@ CudaCalcCoulFluxKernel::~CudaCalcAmoebaMultipoleForceKernel() {
 void CudaCalcCoulFluxKernel::initialize(const System& system, const CoulFluxForce& force) {
     cu.setAsCurrent();
     int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
-    bool useEwald = (force.NonbondedMethod == 1);
+    useEwald = (force.NonbondedMethod == 1);
     numParticles = force.getNumParticles();
 
     // - Initialize parameters.
@@ -121,10 +121,13 @@ void CudaCalcCoulFluxKernel::initialize(const System& system, const CoulFluxForc
         }
     }
     //    - CudaArray dQdXval;
+
     vector<float> dQdXvalVec;
     for(int i = 0; i < numParticles*maxnumdX; i++){
-        dQdXvalVec.push_back(0.0);
+        dQdXvalVec.push_back(0.0f);
     }
+
+
     //    - CudaArray dEdQ;
     vector<float> dEdQVec;
     for(int i = 0; i < numParticles; i++){
@@ -159,7 +162,7 @@ void CudaCalcCoulFluxKernel::initialize(const System& system, const CoulFluxForc
     
     dQdXidx.initialize<int>(cu, numParticles*maxnumdX, "dQdXidx"); 
     dQdXidx.upload(dQdXidxVec);
-    dQdXval.initialize<float>(cu, numParticles*maxnumdX, "dQdXval"); 
+    dQdXval.initialize(cu, numParticles*maxnumdX, elementSize, "dQdXval"); 
     dQdXval.upload(dQdXvalVec);
     dEdQ.initialize(cu, numParticles, elementSize, "dEdQ");
     dEdQ.upload(dEdQVec);
@@ -168,6 +171,36 @@ void CudaCalcCoulFluxKernel::initialize(const System& system, const CoulFluxForc
     realCharge.initialize(cu, numParticles, elementSize, "realCharge");
     realCharge.upload(realChargeVec);
 
+    // initialize bond parameters
+    int numBond = force.getNumCoulFluxBond();
+    bondidx.initialize<int2>(cu, numBond * 2, "bondidx");
+    bondparam.initialize<float2>(cu, numBond * 2, "bondparam");
+    int numAngle = force.getNumCoulFluxAngle();
+    angleidx.initialize<int3>(cu, numAngle * 3, "angleidx");
+    angleparam.initialize<float3>(cu, numAngle * 3, "angleparam");
+
+    vector<int2> bondidxvec;
+    vector<float2> bondparamvec;
+    for(int i=0;i<numBond; i++){
+        int pi, pj;
+        double r0, j;
+        force.getCoulFluxBond(i, pi, pj, r0, j);
+        bondidxvec.push_back(make_int2(pi, pj));
+        bondparamvec.push_back(make_float2((float) j, (float) r0));
+    }
+    vector<int3> angleidxvec;
+    vector<float3> angleparamvec;
+    for(int i=0;i<numAngle; i++){
+        int pi, pj, pk;
+        double theta0, ja, jc;
+        force.getCoulFluxAngle(i, pi, pj, pk, theta0, ja, jc);
+        angleidxvec.push_back(make_int3(pi, pj, pk));
+        angleparamvec.push_back(make_float3((float) theta0, (float) ja, (float) jc));
+    }
+    bondidx.upload(bondidxvec);
+    bondparam.upload(bondparamvec);
+    angleidx.upload(angleidxvec);
+    angleparam.upload(angleparamvec);
 
 
     // if use Ewald
@@ -229,6 +262,7 @@ void CudaCalcCoulFluxKernel::initialize(const System& system, const CoulFluxForc
     defines["LAST_EXCLUSION_TILE"] = cu.intToString(endExclusionIndex);
     // Update kmaxx, kmaxy, kmaxz
 
+
     // -- Build some kernels: generate kernel files and load them
 
     cu.addForce(new ForceInfo(force));
@@ -240,7 +274,7 @@ double CudaCalcCoulFluxKernel::execute(ContextImpl& context, bool includeForces,
     // Run kernel for dQdX calculation
 
     // If NoCutoff
-    if (...) {
+    if (not useEwald) {
         // Run NoCutoff version
     }
     // else

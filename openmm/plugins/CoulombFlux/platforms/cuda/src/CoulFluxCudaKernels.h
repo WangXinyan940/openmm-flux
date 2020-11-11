@@ -69,10 +69,15 @@ public:
 private:
     void computeParameters(ContextImpl& context);
 
+    bool useEwald;
     int numParticles, numExceptions;
     class ForceInfo;
     CudaArray dQdXidx;
     CudaArray dQdXval;
+    CudaArray bondidx;
+    CudaArray bondparam;
+    CudaArray angleidx;
+    CudaArray angleparam;
     CudaArray dEdQ;
     CudaArray CosSin; 
     CudaArray initCharge;
